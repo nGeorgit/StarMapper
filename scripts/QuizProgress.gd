@@ -1,13 +1,19 @@
 extends Node
 ## Autoload: persists the player's best score for every (culture, difficulty, sky,
-## season, quiz length) combo they've run, and derives each culture's completion %
-## from it. A difficulty+sky+season combo only counts as "done" once ALL THREE
-## lengths (30/50/100%) have each been beaten with a perfect score -- a partial-length
-## perfect run alone isn't enough, since it necessarily skips some constellations.
-## Sky=LOCATION and Season=CURRENT are excluded from the completion % entirely: their
-## pool depends on real position/date rather than a fixed, repeatable quiz, so
-## "completing" them isn't a comparable milestone the way North/South + Winter/Summer
-## are. Their best scores are still tracked/shown, just not counted toward %.
+## season, quiz length) combo they've run, and derives each menu level's progress %
+## purely from its own direct children, one level down, recursively:
+##   length (leaf) -- best_correct/best_total of that exact combo, 0 if never attempted
+##   season         -- avg of its 3 quiz-length children
+##   difficulty     -- avg of its Winter/Summer season children
+##   culture (+sky) -- avg of its Easy/Medium/Hard difficulty children
+##   sky            -- avg of its culture children (every culture visible in that sky)
+##   overall        -- avg of its North/South sky children
+## An unattempted child counts as 0 in its parent's average (it's not skipped), so a
+## single 50%-correct run already pulls its season/difficulty/etc above 0%.
+## Sky=LOCATION and Season=CURRENT are excluded from every average entirely: their
+## pool depends on real position/date rather than a fixed, repeatable quiz, so they
+## aren't a comparable milestone the way North/South + Winter/Summer are. Their best
+## scores are still tracked/shown, just never counted as a child in any average.
 
 const SAVE_PATH := "user://quiz_progress.json"
 const TRACKED_SKIES := [GameState.SkyChoice.NORTH, GameState.SkyChoice.SOUTH]
@@ -39,31 +45,64 @@ func get_best(culture_id: String, difficulty: GameState.Difficulty, sky: GameSta
 	var culture_data: Dictionary = _data.get(culture_id, {})
 	return culture_data.get(_key(difficulty, sky, season, length), {})
 
-## % of this culture's difficulty+sky+season combos (North/South x Winter/Summer x
-## Easy/Medium/Hard) that have been perfected at all three quiz lengths. Combos whose
-## sky/season pairing has nothing to quiz for this culture don't count toward the total.
-func culture_completion_pct(culture_id: String) -> float:
+## Leaf: this exact combo's best score %, or 0 if never attempted. Used by
+## QuizLengthMenu.
+func length_pct(culture_id: String, difficulty: GameState.Difficulty, sky: GameState.SkyChoice,
+		season: GameState.Season, length: GameState.QuizLength) -> float:
+	var best := get_best(culture_id, difficulty, sky, season, length)
+	return 0.0 if best.is_empty() or int(best["best_total"]) == 0 \
+		else 100.0 * int(best["best_correct"]) / int(best["best_total"])
+
+## Avg of the 3 quiz lengths under this exact combo. Used by SeasonMenu.
+func season_pct(culture_id: String, difficulty: GameState.Difficulty, sky: GameState.SkyChoice, season: GameState.Season) -> float:
+	var values: Array[float] = []
+	for length in LENGTHS:
+		values.append(length_pct(culture_id, difficulty, sky, season, length))
+	return _avg(values)
+
+## Avg of the Winter/Summer seasons under this culture+difficulty+sky (only seasons
+## that actually have something visible to quiz -- a season with nothing visible for
+## this culture+sky was never a real child to begin with). Used by DifficultyMenu.
+func difficulty_pct(culture_id: String, difficulty: GameState.Difficulty, sky: GameState.SkyChoice) -> float:
 	var constellations := QuizAvailability.load_culture_raw(culture_id)
-	if constellations.is_empty():
-		return 0.0
-	var culture_data: Dictionary = _data.get(culture_id, {})
-	var total_combos := 0
-	var completed_combos := 0
+	var values: Array[float] = []
+	for season in TRACKED_SEASONS:
+		if QuizAvailability.visible_count(constellations, sky, season) > 0:
+			values.append(season_pct(culture_id, difficulty, sky, season))
+	return _avg(values)
+
+## Avg of Easy/Medium/Hard under this culture+sky. Used by CultureMenu -- sky is
+## already fixed by that point (Sky is picked before Culture).
+func culture_pct(culture_id: String, sky: GameState.SkyChoice) -> float:
+	var values: Array[float] = []
+	for difficulty in DIFFICULTIES:
+		values.append(difficulty_pct(culture_id, difficulty, sky))
+	return _avg(values)
+
+## Avg of every culture visible under this sky. Used by SkyMenu, picked before any
+## culture.
+func sky_pct(sky: GameState.SkyChoice) -> float:
+	var values: Array[float] = []
+	for culture in ConstellationSets.available:
+		var raw := QuizAvailability.load_culture_raw(culture["id"])
+		if QuizAvailability.has_any_visible(raw, sky):
+			values.append(culture_pct(culture["id"], sky))
+	return _avg(values)
+
+## Avg of North/South. Used by QuizTypeMenu, the first step.
+func overall_pct() -> float:
+	var values: Array[float] = []
 	for sky in TRACKED_SKIES:
-		for season in TRACKED_SEASONS:
-			if QuizAvailability.visible_count(constellations, sky, season) == 0:
-				continue
-			for difficulty in DIFFICULTIES:
-				total_combos += 1
-				var all_lengths_perfect := true
-				for length in LENGTHS:
-					var best: Dictionary = culture_data.get(_key(difficulty, sky, season, length), {})
-					if best.is_empty() or int(best["best_correct"]) != int(best["best_total"]) or int(best["best_total"]) == 0:
-						all_lengths_perfect = false
-						break
-				if all_lengths_perfect:
-					completed_combos += 1
-	return 0.0 if total_combos == 0 else 100.0 * completed_combos / total_combos
+		values.append(sky_pct(sky))
+	return _avg(values)
+
+func _avg(values: Array[float]) -> float:
+	if values.is_empty():
+		return 0.0
+	var sum := 0.0
+	for v in values:
+		sum += v
+	return sum / values.size()
 
 func _key(difficulty: GameState.Difficulty, sky: GameState.SkyChoice, season: GameState.Season, length: GameState.QuizLength) -> String:
 	return "%d|%d|%d|%d" % [difficulty, sky, season, length]

@@ -10,6 +10,7 @@ func _ready() -> void:
 	$VBox/CurrentButton.pressed.connect(_on_pressed.bind(GameState.Season.CURRENT))
 	$BackButton.pressed.connect(_on_back_pressed)
 	_hide_dead_end_seasons()
+	_show_progress()
 
 ## Hides whichever seasons would leave nothing to quiz for the culture+sky already
 ## picked, so the player never lands on an empty QuizLengthMenu.
@@ -22,6 +23,14 @@ func _hide_dead_end_seasons() -> void:
 	for season in buttons:
 		if QuizAvailability.visible_count(ConstellationSets.constellations, GameState.sky_choice, season) == 0:
 			buttons[season].visible = false
+
+## Appends the player's progress % to Winter/Summer (Current isn't a comparable,
+## repeatable quiz, so it's left without one -- see QuizProgress).
+func _show_progress() -> void:
+	for season in [GameState.Season.WINTER, GameState.Season.SUMMER]:
+		var btn: Button = $VBox/WinterButton if season == GameState.Season.WINTER else $VBox/SummerButton
+		var pct := QuizProgress.season_pct(ConstellationSets.active_id, GameState.difficulty, GameState.sky_choice, season)
+		btn.text += " — %d%%" % roundi(pct)
 
 func _on_pressed(season: GameState.Season) -> void:
 	GameState.season = season

@@ -16,6 +16,12 @@ its "hips" list against each star's "id" to decide which stars must stay visible
 of the zoom-driven magnitude cutoff, so no "always visible" flag needs to be baked into
 stars.json itself -- that catalog stays completely set-independent.
 
+Constellations whose Stellarium entry carries an "image" block (the culture's figure
+artwork, anchored to 3 HIP-numbered stars) get that block passed through with anchors
+resolved to ra/dec -- ConstellationArt.gd uses those 3 sky-space anchors to gnomonic-project
+the artwork onto the celestial sphere. Most cultures don't have artwork for every
+constellation (or any); greek_dante is the only one fully illustrated.
+
 No constellation *boundary* polygons are shipped in the stellarium repo (IAU boundaries are
 compiled into its C++ source, not a data file), so tap hit-testing in-game falls back to
 angular distance to the nearest constellation-line star. Good enough for v1.
@@ -101,6 +107,28 @@ def resolve_point(catalog: dict[int, dict], pt, all_hips: set[int]) -> tuple[flo
     return None
 
 
+def resolve_image(image: dict | None, catalog: dict[int, dict], culture_dir: Path) -> dict | None:
+    """Resolves a skyculture "image" block's HIP-numbered anchors to ra/dec so the
+    renderer can gnomonic-project the artwork onto the sphere from its 3 anchor stars.
+    None if the block is missing or any anchor's HIP isn't in the catalog."""
+    if not image:
+        return None
+    anchors = []
+    for a in image.get("anchors", []):
+        star = catalog.get(a.get("hip"))
+        if star is None:
+            return None
+        anchors.append({"pos": a["pos"], "ra": round(star["ra"], 5), "dec": round(star["dec"], 5)})
+    if len(anchors) < 3:
+        return None
+    rel_dir = culture_dir.relative_to(ROOT)
+    return {
+        "file": f"res://{rel_dir.as_posix()}/{image['file']}",
+        "size": image["size"],
+        "anchors": anchors,
+    }
+
+
 def write_constellation_set(culture_dir: Path, catalog: dict[int, dict]) -> dict | None:
     index_path = culture_dir / "index.json"
     data = json.loads(index_path.read_text(encoding="utf-8"))
@@ -125,11 +153,15 @@ def write_constellation_set(culture_dir: Path, catalog: dict[int, dict]) -> dict
                 segments.append([a[0], a[1], b[0], b[1]])
         if not segments:
             continue
-        out_cons.append({
+        entry = {
             "id": abbr,
             "name": common_name_for(c),
             "segments": [[round(v, 5) for v in seg] for seg in segments],
-        })
+        }
+        image = resolve_image(c.get("image"), catalog, culture_dir)
+        if image:
+            entry["image"] = image
+        out_cons.append(entry)
 
     if not out_cons:
         return None

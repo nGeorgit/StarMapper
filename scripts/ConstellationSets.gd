@@ -11,7 +11,7 @@ extends Node
 const MANIFEST_PATH := "res://data/constellation_sets/manifest.json"
 const SETS_DIR := "res://data/constellation_sets/"
 const CONFIG_PATH := "user://settings.cfg"
-const DEFAULT_SET_ID := "modern_iau"  ## western/IAU 88 -- matches the game's original single set
+const DEFAULT_SET_ID := "modern"  ## modern/H.A.Rey style set
 
 signal set_changed
 
@@ -25,14 +25,24 @@ func _ready() -> void:
 	var saved_id := _read_default_from_config()
 	_load_set(saved_id if saved_id != "" else DEFAULT_SET_ID)
 
-## Switches the active set, reloads its data, and saves it as the new startup default.
-func set_active(id: String) -> void:
+## Switches the active set and reloads its data. Saves it as the new startup default
+## unless persist is false -- used by menu-background previews (e.g. always showing
+## "modern" before a culture has been picked) so they don't clobber the player's real
+## saved preference.
+func set_active(id: String, persist: bool = true) -> void:
 	if id == active_id:
 		return
 	if not _load_set(id):
 		return
-	_write_default_to_config(id)
+	if persist:
+		_write_default_to_config(id)
 	set_changed.emit()
+
+## The player's real saved culture (or the built-in default if none saved yet) --
+## independent of whatever set_active(id, false) may have temporarily switched to.
+func default_id() -> String:
+	var saved := _read_default_from_config()
+	return saved if saved != "" else DEFAULT_SET_ID
 
 func _load_manifest() -> void:
 	if not FileAccess.file_exists(MANIFEST_PATH):

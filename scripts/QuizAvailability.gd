@@ -55,6 +55,14 @@ static func visible_count(constellations: Array, sky: GameState.SkyChoice, seaso
 			n += 1
 	return n
 
+## Whether this culture (already loaded) has anything visible for this sky in at
+## least one season (Winter/Summer/Current). Used to filter out dead-end cultures.
+static func has_any_visible(constellations: Array, sky: GameState.SkyChoice) -> bool:
+	for season in [GameState.Season.WINTER, GameState.Season.SUMMER, GameState.Season.CURRENT]:
+		if visible_count(constellations, sky, season) > 0:
+			return true
+	return false
+
 ## Loads a culture's constellations straight from disk, independent of whichever set
 ## ConstellationSets currently has active (mirrors ConstellationSets._load_set without
 ## mutating the singleton). Returns [] if the culture id doesn't exist.

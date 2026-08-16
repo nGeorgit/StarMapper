@@ -44,7 +44,7 @@ func _ready() -> void:
 		return
 
 	play_again_button.pressed.connect(_restart_quiz)
-	menu_button.pressed.connect(_go_to_menu)
+	menu_button.pressed.connect(_go_to_last_setup_menu)
 
 	if GameState.quiz_round_count > 0:
 		quiz_round_total = GameState.quiz_round_count
@@ -68,6 +68,12 @@ func _visible_constellations() -> Array:
 
 func _go_to_menu() -> void:
 	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
+
+## Finishing a quiz drops back to the last setup step (quiz length) instead of the
+## main menu root, so re-rolling settings and starting another round doesn't mean
+## walking the whole sky/culture/difficulty/season funnel again.
+func _go_to_last_setup_menu() -> void:
+	get_tree().change_scene_to_file("res://scenes/QuizLengthMenu.tscn")
 
 func _restart_quiz() -> void:
 	_round_index = 0

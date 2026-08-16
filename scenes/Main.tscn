@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/CameraRig.gd" id="1_camrig"]
 [ext_resource type="Script" path="res://scripts/StarField.gd" id="2_starfield"]
@@ -11,6 +11,10 @@
 [ext_resource type="Script" path="res://scripts/SkyRoot.gd" id="9_skyroot"]
 [ext_resource type="Script" path="res://scripts/Ground.gd" id="10_ground"]
 [ext_resource type="Script" path="res://scripts/SettingsPanel.gd" id="11_settingspanel"]
+[ext_resource type="Script" path="res://scripts/ConstellationArt.gd" id="12_conart"]
+[ext_resource type="Script" path="res://scripts/AltAzGrid.gd" id="13_altazgrid"]
+[ext_resource type="Script" path="res://scripts/CompassLabels.gd" id="14_compass"]
+[ext_resource type="Script" path="res://scripts/ObserverInfoLabel.gd" id="15_obsinfo"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_mode = 1
@@ -34,6 +38,12 @@ far = 5000.0
 [node name="Ground" type="MeshInstance3D" parent="."]
 script = ExtResource("10_ground")
 
+[node name="AltAzGrid" type="MultiMeshInstance3D" parent="."]
+script = ExtResource("13_altazgrid")
+
+[node name="CompassLabels" type="Node3D" parent="."]
+script = ExtResource("14_compass")
+
 [node name="SkyRoot" type="Node3D" parent="."]
 script = ExtResource("9_skyroot")
 
@@ -42,6 +52,9 @@ script = ExtResource("2_starfield")
 
 [node name="ConstellationLines" type="MultiMeshInstance3D" parent="SkyRoot"]
 script = ExtResource("3_conlines")
+
+[node name="ConstellationArt" type="Node3D" parent="SkyRoot"]
+script = ExtResource("12_conart")
 
 [node name="StarLabels" type="Node3D" parent="SkyRoot"]
 script = ExtResource("6_starlabels")
@@ -58,20 +71,32 @@ script = ExtResource("5_screenshot")
 [node name="UI" type="CanvasLayer" parent="."]
 
 [node name="TargetLabel" type="Label" parent="UI"]
-offset_left = 24.0
-offset_top = 48.0
-offset_right = 600.0
-offset_bottom = 100.0
-theme_override_font_sizes/font_size = 32
+offset_left = 41.0
+offset_top = 82.0
+offset_right = 1020.0
+offset_bottom = 170.0
+theme_override_font_sizes/font_size = 54
 text = "Find: —"
 
 [node name="FeedbackLabel" type="Label" parent="UI"]
-offset_left = 24.0
-offset_top = 100.0
-offset_right = 600.0
-offset_bottom = 140.0
-theme_override_font_sizes/font_size = 24
+offset_left = 41.0
+offset_top = 170.0
+offset_right = 1020.0
+offset_bottom = 238.0
+theme_override_font_sizes/font_size = 41
 text = ""
+
+[node name="ObserverInfoLabel" type="Label" parent="UI"]
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 41.0
+offset_top = -167.0
+offset_right = 550.0
+offset_bottom = -41.0
+theme_override_colors/font_color = Color(0.75, 0.85, 0.8, 0.9)
+theme_override_font_sizes/font_size = 28
+text = ""
+script = ExtResource("15_obsinfo")
 
 [node name="ZoomControls" type="Control" parent="UI"]
 anchors_preset = 3
@@ -79,47 +104,47 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -88.0
-offset_top = -160.0
-offset_right = -24.0
-offset_bottom = -24.0
+offset_left = -150.0
+offset_top = -272.0
+offset_right = -41.0
+offset_bottom = -41.0
 mouse_filter = 2
 script = ExtResource("7_zoomcontrols")
 
 [node name="ZoomInButton" type="Button" parent="UI/ZoomControls"]
 offset_left = 0.0
 offset_top = 0.0
-offset_right = 64.0
-offset_bottom = 64.0
-theme_override_font_sizes/font_size = 32
+offset_right = 109.0
+offset_bottom = 109.0
+theme_override_font_sizes/font_size = 54
 text = "+"
 
 [node name="ZoomOutButton" type="Button" parent="UI/ZoomControls"]
 offset_left = 0.0
-offset_top = 72.0
-offset_right = 64.0
-offset_bottom = 136.0
-theme_override_font_sizes/font_size = 32
+offset_top = 122.0
+offset_right = 109.0
+offset_bottom = 231.0
+theme_override_font_sizes/font_size = 54
 text = "-"
 
 [node name="BackButton" type="Button" parent="UI"]
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -140.0
-offset_top = 24.0
-offset_right = -24.0
-offset_bottom = 72.0
-theme_override_font_sizes/font_size = 20
+offset_left = -238.0
+offset_top = 41.0
+offset_right = -41.0
+offset_bottom = 122.0
+theme_override_font_sizes/font_size = 34
 text = "Menu"
 
 [node name="SettingsButton" type="Button" parent="UI"]
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -140.0
-offset_top = 84.0
-offset_right = -24.0
-offset_bottom = 132.0
-theme_override_font_sizes/font_size = 20
+offset_left = -238.0
+offset_top = 143.0
+offset_right = -41.0
+offset_bottom = 224.0
+theme_override_font_sizes/font_size = 34
 text = "Settings"
 
 [node name="SettingsPanel" type="PanelContainer" parent="UI"]
@@ -127,10 +152,10 @@ anchor_left = 1.0
 anchor_top = 0.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -360.0
-offset_top = 140.0
-offset_right = -16.0
-offset_bottom = -16.0
+offset_left = -612.0
+offset_top = 238.0
+offset_right = -27.0
+offset_bottom = -27.0
 script = ExtResource("11_settingspanel")
 
 [node name="ResultsPanel" type="VBoxContainer" parent="UI"]
@@ -139,27 +164,27 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = -140.0
-offset_right = 220.0
-offset_bottom = 140.0
-theme_override_constants/separation = 20
+offset_left = -374.0
+offset_top = -238.0
+offset_right = 374.0
+offset_bottom = 238.0
+theme_override_constants/separation = 34
 
 [node name="ResultsLabel" type="Label" parent="UI/ResultsPanel"]
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 51
 horizontal_alignment = 1
 autowrap_mode = 2
 text = "You found 0/10 constellations!"
 
 [node name="Spacer" type="Control" parent="UI/ResultsPanel"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 27)
 
 [node name="PlayAgainButton" type="Button" parent="UI/ResultsPanel"]
-custom_minimum_size = Vector2(0, 60)
-theme_override_font_sizes/font_size = 24
+custom_minimum_size = Vector2(0, 102)
+theme_override_font_sizes/font_size = 41
 text = "Play Again"
 
 [node name="MenuButton" type="Button" parent="UI/ResultsPanel"]
-custom_minimum_size = Vector2(0, 60)
-theme_override_font_sizes/font_size = 24
+custom_minimum_size = Vector2(0, 102)
+theme_override_font_sizes/font_size = 41
 text = "Menu"

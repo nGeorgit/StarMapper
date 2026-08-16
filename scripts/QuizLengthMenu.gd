@@ -28,7 +28,9 @@ func _setup_button(btn: Button, length: GameState.QuizLength, count: int) -> voi
 	var text := "%d constellations" % count
 	var best := QuizProgress.get_best(ConstellationSets.active_id, GameState.difficulty, GameState.sky_choice, GameState.season, length)
 	if not best.is_empty():
-		text += " — best %d/%d" % [best["best_correct"], best["best_total"]]
+		var best_total := int(best["best_total"])
+		var pct := 0 if best_total == 0 else roundi(100.0 * int(best["best_correct"]) / best_total)
+		text += " — best %d/%d (%d%%)" % [best["best_correct"], best_total, pct]
 	btn.text = text
 	btn.pressed.connect(_on_pressed.bind(length, count))
 

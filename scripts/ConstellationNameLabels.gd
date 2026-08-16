@@ -6,11 +6,14 @@ extends Node3D
 @export var label_color := Color(0.55, 0.75, 0.95, 0.85)
 @export var font_size := 26
 @export var pixel_size := 0.9
+@export var is_background := false  ## true for decorative menu-background instances: always
+## shows names, ignoring GameState.mode (which reflects the real gameplay scene, not this
+## decorative one)
 
 @onready var constellation_lines: MultiMeshInstance3D = $"../ConstellationLines"
 
 func _ready() -> void:
-	if GameState.mode != GameState.Mode.EXPLORE:
+	if not is_background and GameState.mode != GameState.Mode.EXPLORE:
 		return
 	ConstellationSets.set_changed.connect(_rebuild)
 	await get_tree().process_frame  # let ConstellationLines finish loading its JSON first

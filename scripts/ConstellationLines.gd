@@ -12,6 +12,9 @@ extends MultiMeshInstance3D
 @export var highlight_radius_mult := 2.5  ## thicker lines for the highlighted constellation
 @export var star_gap := 6.0  ## world units trimmed off each segment end so the line doesn't cover the star marker
 @export var reference_fov := 60.0  ## fov at which line_radius renders at its literal value; scaled up/down from there so screen-space width stays constant across zoom
+@export var is_background := false  ## true for decorative menu-background instances: always
+## shows lines at full explore-mode richness, ignoring GameState.mode (which reflects the
+## real gameplay scene, not this decorative one)
 
 @onready var camera_rig: CameraRig = $"../../CameraRig"
 
@@ -26,7 +29,7 @@ var _mat: ShaderMaterial  ## kept around so fov changes can update its scale uni
 var _ref_tan := 1.0  ## tan(reference_fov / 2), precomputed so _on_fov_changed is cheap
 
 func _ready() -> void:
-	if GameState.mode == GameState.Mode.QUIZ and GameState.difficulty != GameState.Difficulty.EASY:
+	if not is_background and GameState.mode == GameState.Mode.QUIZ and GameState.difficulty != GameState.Difficulty.EASY:
 		_lines_visible = false
 	_ref_tan = tan(deg_to_rad(reference_fov) * 0.5)
 	ConstellationSets.set_changed.connect(_load_and_build)

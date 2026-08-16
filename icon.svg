@@ -1,10 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
 <rect width="128" height="128" fill="#101425"/>
-<circle cx="34" cy="40" r="3" fill="#ffffff"/>
-<circle cx="70" cy="28" r="2" fill="#ffffff"/>
-<circle cx="94" cy="58" r="3" fill="#ffffff"/>
-<circle cx="60" cy="80" r="2.5" fill="#ffffff"/>
-<circle cx="90" cy="96" r="2" fill="#ffffff"/>
-<circle cx="40" cy="90" r="2" fill="#ffffff"/>
-<path d="M34 40 L70 28 L94 58 L60 80 L90 96 M60 80 L40 90" stroke="#5f8cff" stroke-width="1.5" fill="none"/>
+<circle cx="110" cy="18" r="3" fill="#ffffff"/>
+<circle cx="102.1" cy="23.9" r="2" fill="#ffffff"/>
+<circle cx="92.6" cy="47.8" r="2" fill="#ffffff"/>
+<circle cx="69.3" cy="65.5" r="3" fill="#ffffff"/>
+<circle cx="57.2" cy="47.3" r="2.5" fill="#ffffff"/>
+<circle cx="54.2" cy="88.2" r="2" fill="#ffffff"/>
+<circle cx="37.5" cy="101.8" r="2" fill="#ffffff"/>
+<circle cx="18" cy="107.2" r="2.5" fill="#ffffff"/>
+<circle cx="85.5" cy="84.2" r="2" fill="#ffffff"/>
+<circle cx="101.5" cy="110" r="2.5" fill="#ffffff"/>
+<path d="M110 18 L102.1 23.9 L92.6 47.8 L69.3 65.5 L57.2 47.3 M69.3 65.5 L54.2 88.2 L37.5 101.8 L18 107.2 M69.3 65.5 L85.5 84.2 L101.5 110" stroke="#5f8cff" stroke-width="1.5" fill="none"/>
 </svg>

@@ -14,6 +14,19 @@ static func ra_dec_to_vector3(ra_deg: float, dec_deg: float, radius: float = SKY
 	var y := sin(dec)
 	return Vector3(x, y, z) * radius
 
+## Alt/Az (degrees) to a world-space Cartesian point, using the same axis convention as
+## horizontal_basis(): world Y = zenith, -Z = due north, +X = due east, azimuth measured
+## clockwise from north through east. Unlike ra_dec_to_vector3, this is already in the
+## observer's local Alt/Az frame -- no SkyRoot rotation needed, which is exactly why the
+## azimuth grid/compass letters (fixed to the horizon, not the stars) use it directly.
+static func alt_az_to_vector3(alt_deg: float, az_deg: float, radius: float = SKY_RADIUS) -> Vector3:
+	var alt := deg_to_rad(alt_deg)
+	var az := deg_to_rad(az_deg)
+	var x := cos(alt) * sin(az)
+	var y := sin(alt)
+	var z := -cos(alt) * cos(az)
+	return Vector3(x, y, z) * radius
+
 ## Inverse of ra_dec_to_vector3, used to test where on the sky a screen click landed.
 static func vector3_to_ra_dec(v: Vector3) -> Vector2:
 	var n := v.normalized()

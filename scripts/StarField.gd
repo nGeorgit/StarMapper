@@ -26,6 +26,9 @@ extends MultiMeshInstance3D
 @export var desaturate_dim_stars := 0.0  ## 0=full color at all brightness, 1=faintest stars fully white
 @export var brightness_boost := 2.0  ## pushes bright-star color past 1.0 so their additive core overexposes wider/whiter, like a real photo
 @export var only_constellation_stars := false  ## quiz Easy/Medium: hide every star not part of a constellation
+@export var is_background := false  ## true for decorative menu-background instances: always
+## renders full explore-mode richness, ignoring GameState.mode (which reflects the real
+## gameplay scene, not this decorative one)
 
 @onready var camera_rig: CameraRig = $"../../CameraRig"
 
@@ -37,7 +40,7 @@ var _current_mag_cutoff := 99.0
 var _quad: QuadMesh  ## kept around so the debug settings panel can live-resize the halo
 
 func _ready() -> void:
-	if GameState.mode == GameState.Mode.QUIZ and GameState.difficulty != GameState.Difficulty.HARD:
+	if not is_background and GameState.mode == GameState.Mode.QUIZ and GameState.difficulty == GameState.Difficulty.MEDIUM:
 		only_constellation_stars = true
 	ConstellationSets.set_changed.connect(reload)
 	_load_stars()

@@ -12,6 +12,12 @@ extends Node3D
 @export var pitch_limit_deg := 89.0
 @export var inertia_friction := 4.0  ## higher = stops sooner
 
+## Decorative mode for menu backgrounds: ignores all drag/zoom input and instead yaws
+## slowly and continuously on its own, so a menu screen's starfield feels alive without
+## being interactive (no drag stolen from the buttons/UI drawn on top).
+@export var auto_pan_enabled := false
+@export var auto_pan_speed_deg_per_sec := 1.4
+
 ## Manual correction for magnetometer heading error (hard-iron bias, uncalibrated
 ## sensor, whatever) — nudge with adjust_ar_heading_offset() until the sky matches
 ## reality. No auto figure-8 calibration flow yet.
@@ -37,7 +43,16 @@ var _touches := {}  ## index -> Vector2 position, for single-drag vs pinch-zoom
 var _pinch_start_dist := -1.0
 var _pinch_start_fov := 0.0
 
+func _ready() -> void:
+	if auto_pan_enabled:
+		## Seed from whatever rotation the scene file set (e.g. a gentle upward tilt)
+		## instead of snapping to (0, 0, 0) on the first auto-pan _process tick.
+		_pitch = rotation.x
+		_yaw = rotation.y
+
 func _unhandled_input(event: InputEvent) -> void:
+	if auto_pan_enabled:
+		return  # decorative menu background -- never steals drag/zoom input
 	if ar_mode_enabled:
 		return  # orientation comes from sensors in _process; ignore drag/swipe look
 	if event is InputEventMouseButton:
@@ -60,6 +75,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_drag(event)
 
 func _process(delta: float) -> void:
+	if auto_pan_enabled:
+		_yaw += deg_to_rad(auto_pan_speed_deg_per_sec) * delta
+		rotation = Vector3(_pitch, _yaw, 0.0)
+		return
 	if ar_mode_enabled:
 		_apply_ar_orientation()
 		return

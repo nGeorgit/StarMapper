@@ -8,10 +8,20 @@ extends Control
 ## real GPS source is wired up).
 
 func _ready() -> void:
+	ConstellationSets.set_active("modern", false)  # background preview default, before any culture is picked
 	$VBox/NorthButton.pressed.connect(_on_pressed.bind(GameState.SkyChoice.NORTH))
 	$VBox/SouthButton.pressed.connect(_on_pressed.bind(GameState.SkyChoice.SOUTH))
 	$VBox/LocationButton.pressed.connect(_on_pressed.bind(GameState.SkyChoice.LOCATION))
 	$BackButton.pressed.connect(_on_back_pressed)
+	_show_progress()
+
+## Appends the player's overall progress % (across every culture) to North/South.
+## Location isn't a comparable, repeatable quiz, so it's left without one.
+func _show_progress() -> void:
+	for sky in [GameState.SkyChoice.NORTH, GameState.SkyChoice.SOUTH]:
+		var btn: Button = $VBox/NorthButton if sky == GameState.SkyChoice.NORTH else $VBox/SouthButton
+		var pct := QuizProgress.sky_pct(sky)
+		btn.text += " — %d%%" % roundi(pct)
 
 func _on_pressed(choice: GameState.SkyChoice) -> void:
 	GameState.sky_choice = choice

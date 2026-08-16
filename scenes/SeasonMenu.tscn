@@ -1,23 +1,67 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/SeasonMenu.gd" id="1_seasonmenu"]
+[ext_resource type="Script" path="res://scripts/CameraRig.gd" id="90_camrig"]
+[ext_resource type="Script" path="res://scripts/StarField.gd" id="91_starfield"]
+[ext_resource type="Script" path="res://scripts/ConstellationLines.gd" id="92_conlines"]
+[ext_resource type="Script" path="res://scripts/ConstellationArt.gd" id="93_conart"]
+[ext_resource type="Script" path="res://scripts/ConstellationNameLabels.gd" id="94_connames"]
+[ext_resource type="Script" path="res://scripts/SkyRoot.gd" id="95_skyroot"]
+
+[sub_resource type="Environment" id="Environment_bg_sky"]
+background_mode = 1
+background_color = Color(0.0, 0.0, 0.02, 1.0)
+ambient_light_source = 2
+ambient_light_color = Color(0, 0, 0, 1)
 
 [node name="SeasonMenu" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_seasonmenu")
 
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_bg_sky")
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("90_camrig")
+auto_pan_enabled = true
+rotation_degrees = Vector3(-20, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+fov = 70.0
+near = 0.1
+far = 5000.0
+
+[node name="SkyRoot" type="Node3D" parent="."]
+script = ExtResource("95_skyroot")
+
+[node name="StarField" type="MultiMeshInstance3D" parent="SkyRoot"]
+script = ExtResource("91_starfield")
+is_background = true
+
+[node name="ConstellationLines" type="MultiMeshInstance3D" parent="SkyRoot"]
+script = ExtResource("92_conlines")
+is_background = true
+
+[node name="ConstellationArt" type="Node3D" parent="SkyRoot"]
+script = ExtResource("93_conart")
+is_background = true
+
+[node name="ConstellationNameLabels" type="Node3D" parent="SkyRoot"]
+script = ExtResource("94_connames")
+is_background = true
+
 [node name="Background" type="ColorRect" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.0, 0.0, 0.02, 1.0)
+color = Color(0.0, 0.0, 0.02, 0.5)
 
 [node name="BackButton" type="Button" parent="."]
-offset_left = 24.0
-offset_top = 24.0
-offset_right = 120.0
-offset_bottom = 64.0
-theme_override_font_sizes/font_size = 20
+offset_left = 41.0
+offset_top = 41.0
+offset_right = 204.0
+offset_bottom = 109.0
+theme_override_font_sizes/font_size = 34
 text = "Back"
 
 [node name="VBox" type="VBoxContainer" parent="."]
@@ -25,37 +69,37 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = -160.0
-offset_right = 220.0
-offset_bottom = 160.0
-theme_override_constants/separation = 24
+offset_left = -374.0
+offset_top = -272.0
+offset_right = 374.0
+offset_bottom = 272.0
+theme_override_constants/separation = 41
 
 [node name="Title" type="Label" parent="VBox"]
-theme_override_font_sizes/font_size = 40
+theme_override_font_sizes/font_size = 68
 horizontal_alignment = 1
 text = "Season"
 
 [node name="Subtitle" type="Label" parent="VBox"]
 theme_override_colors/font_color = Color(0.65, 0.65, 0.7, 1.0)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 31
 horizontal_alignment = 1
 text = "Which season's sky, at midnight?"
 
 [node name="Spacer" type="Control" parent="VBox"]
-custom_minimum_size = Vector2(0, 12)
+custom_minimum_size = Vector2(0, 20)
 
 [node name="WinterButton" type="Button" parent="VBox"]
-custom_minimum_size = Vector2(0, 64)
-theme_override_font_sizes/font_size = 24
+custom_minimum_size = Vector2(0, 109)
+theme_override_font_sizes/font_size = 41
 text = "Winter"
 
 [node name="SummerButton" type="Button" parent="VBox"]
-custom_minimum_size = Vector2(0, 64)
-theme_override_font_sizes/font_size = 24
+custom_minimum_size = Vector2(0, 109)
+theme_override_font_sizes/font_size = 41
 text = "Summer"
 
 [node name="CurrentButton" type="Button" parent="VBox"]
-custom_minimum_size = Vector2(0, 64)
-theme_override_font_sizes/font_size = 24
+custom_minimum_size = Vector2(0, 109)
+theme_override_font_sizes/font_size = 41
 text = "Current Date"
