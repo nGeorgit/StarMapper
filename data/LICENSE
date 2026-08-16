@@ -1,0 +1,19 @@
+Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+
+The files in this directory (stars.json, constellations.json) are derived
+data, built by tools/parse_stellarium_data.py from two upstream sources that
+are themselves licensed CC BY-SA 4.0:
+
+  - HYG Database v4.1 (star positions, magnitudes, proper names)
+    https://codeberg.org/astronexus/hyg
+  - Stellarium "modern_iau" skyculture (constellation line figures)
+    https://github.com/Stellarium/stellarium
+    (skycultures/modern_iau)
+
+Under CC BY-SA 4.0's ShareAlike clause, these derived files — and any
+redistribution or adaptation of them — must remain under CC BY-SA 4.0 with
+attribution, even though the surrounding StarMapper source code is MIT
+licensed. See CREDITS.md at the repo root for full attribution text.
+
+Full license text: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+Human-readable summary: https://creativecommons.org/licenses/by-sa/4.0/

@@ -1,0 +1,64 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/MainMenu.gd" id="1_mainmenu"]
+[ext_resource type="Script" path="res://scripts/ScreenshotAndQuit.gd" id="2_screenshot"]
+
+[node name="MainMenu" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_mainmenu")
+
+[node name="ScreenshotAndQuit" type="Node" parent="."]
+script = ExtResource("2_screenshot")
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.0, 0.0, 0.02, 1.0)
+
+[node name="VBox" type="VBoxContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -160.0
+offset_right = 220.0
+offset_bottom = 160.0
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="VBox"]
+theme_override_font_sizes/font_size = 52
+horizontal_alignment = 1
+text = "StarMapper"
+
+[node name="Subtitle" type="Label" parent="VBox"]
+theme_override_colors/font_color = Color(0.65, 0.65, 0.7, 1.0)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+text = "Learn the night sky"
+
+[node name="Spacer" type="Control" parent="VBox"]
+custom_minimum_size = Vector2(0, 24)
+
+[node name="ExploreButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 68)
+theme_override_font_sizes/font_size = 28
+text = "Explore"
+
+[node name="ExploreHint" type="Label" parent="VBox"]
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1.0)
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+text = "Pan the sky, see every constellation labeled"
+
+[node name="QuizButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 68)
+theme_override_font_sizes/font_size = 28
+text = "Quiz"
+
+[node name="QuizHint" type="Label" parent="VBox"]
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1.0)
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+text = "Pick a difficulty, sky, and season, then find constellations"
