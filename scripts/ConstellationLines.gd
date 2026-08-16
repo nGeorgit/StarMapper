@@ -2,15 +2,18 @@ extends MultiMeshInstance3D
 ## Draws constellation stick-figure lines on the celestial sphere as real cylinder
 ## geometry (not raw GL line primitives) so they get proper width and antialiasing
 ## instead of jagged 1px driver-dependent lines.
-## Expects res://data/constellations.json:
-## [{ "id": "ORI", "name": "Orion", "segments": [[ra1,dec1,ra2,dec2], ...] }, ...]
+## Reads ConstellationSets.constellations (the active set, chosen/persisted by that
+## autoload): [{ "id": "ORI", "name": "Orion", "segments": [[ra1,dec1,ra2,dec2], ...] }, ...]
 
-@export var data_path := "res://data/constellations.json"
 @export var line_color := Color(0.4, 0.6, 1.0, 0.55)
-@export var line_radius := 1.1
+@export var line_radius := 0.75
 @export var radial_segments := 6
 @export var highlight_color := Color(1.0, 0.85, 0.2, 1.0)  ## quiz "reveal" highlight, bright gold
 @export var highlight_radius_mult := 2.5  ## thicker lines for the highlighted constellation
+@export var star_gap := 6.0  ## world units trimmed off each segment end so the line doesn't cover the star marker
+@export var reference_fov := 60.0  ## fov at which line_radius renders at its literal value; scaled up/down from there so screen-space width stays constant across zoom
+
+@onready var camera_rig: CameraRig = $"../../CameraRig"
 
 var constellations: Array = []  ## kept around so GameManager can look up boundaries/names; each
 ## dict gets a "center" (Vector2 ra/dec, degrees) key added at load time.
@@ -19,36 +22,35 @@ var _pairs: Array = []  ## flat [a: Vector3, b: Vector3] per line segment, world
 var _segment_ranges: Dictionary = {}  ## constellation id -> {"start": int, "count": int} into _pairs
 var _highlighted_id := ""
 var _lines_visible := true  ## quiz difficulty: Easy shows lines, Medium/Hard hide them
+var _mat: ShaderMaterial  ## kept around so fov changes can update its scale uniform without rebuilding the mesh
+var _ref_tan := 1.0  ## tan(reference_fov / 2), precomputed so _on_fov_changed is cheap
 
 func _ready() -> void:
 	if GameState.mode == GameState.Mode.QUIZ and GameState.difficulty != GameState.Difficulty.EASY:
 		_lines_visible = false
+	_ref_tan = tan(deg_to_rad(reference_fov) * 0.5)
+	ConstellationSets.set_changed.connect(_load_and_build)
 	_load_and_build()
+	if camera_rig:
+		camera_rig.fov_changed.connect(_on_fov_changed)
+		_on_fov_changed(camera_rig.camera.fov)
 
 func _load_and_build() -> void:
-	if not FileAccess.file_exists(data_path):
-		push_warning("ConstellationLines: %s not found, run tools/parse_stellarium_data.py first" % data_path)
-		return
-
-	var text := FileAccess.get_file_as_string(data_path)
-	constellations = JSON.parse_string(text)
-	if constellations == null:
-		push_error("ConstellationLines: failed to parse %s" % data_path)
-		return
+	clear_highlight()
+	## Duplicate so the "center" key added below doesn't mutate ConstellationSets'
+	## cached data (harmless, but keeps the singleton's array pristine on set switches).
+	constellations = ConstellationSets.constellations.duplicate(true)
 
 	_pairs.clear()
 	_segment_ranges.clear()
 	for c in constellations:
 		var start := _pairs.size()
-		var center_sum := Vector3.ZERO
 		for seg in c["segments"]:
 			var a := AstroMath.ra_dec_to_vector3(seg[0], seg[1])
 			var b := AstroMath.ra_dec_to_vector3(seg[2], seg[3])
 			_pairs.append([a, b])
-			center_sum += a.normalized()
-			center_sum += b.normalized()
 		_segment_ranges[c["id"]] = {"start": start, "count": _pairs.size() - start}
-		c["center"] = AstroMath.vector3_to_ra_dec(center_sum.normalized())
+		c["center"] = AstroMath.constellation_center(c["segments"])
 
 	var cyl := CylinderMesh.new()
 	cyl.top_radius = 1.0
@@ -59,12 +61,27 @@ func _load_and_build() -> void:
 	cyl.cap_top = false
 	cyl.cap_bottom = false
 
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = Color(1, 1, 1, 1)
-	mat.vertex_color_use_as_albedo = true  ## per-instance color drives the actual line color
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	## Custom shader instead of StandardMaterial3D so radius can be rescaled on the GPU
+	## by fov_scale (set from CameraRig.fov_changed) — keeps on-screen line width constant
+	## across zoom without rewriting every instance transform on the CPU each frame.
+	var shader := Shader.new()
+	shader.code = """
+		shader_type spatial;
+		render_mode unshaded, blend_mix, depth_draw_opaque, cull_disabled;
+		uniform float fov_scale = 1.0;
+		void vertex() {
+			VERTEX.x *= fov_scale;
+			VERTEX.z *= fov_scale;
+		}
+		void fragment() {
+			ALBEDO = COLOR.rgb;
+			ALPHA = COLOR.a;
+		}
+	"""
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
 	cyl.material = mat
+	_mat = mat
 
 	multimesh = MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
@@ -76,15 +93,33 @@ func _load_and_build() -> void:
 		_apply_segment_transform(i, line_radius)
 		multimesh.set_instance_color(i, _base_color())
 
+	if camera_rig:
+		_on_fov_changed(camera_rig.camera.fov)  ## re-set the uniform on this freshly built material
+
 	print("ConstellationLines: loaded %d constellations, %d line segments" % [constellations.size(), _pairs.size()])
+
+## Rescales line radius on the GPU so its screen-space width stays constant regardless
+## of zoom: world-space radius must grow with tan(fov/2) to cancel out the perspective
+## shrink from a narrower fov (the player never moves, so distance to the sky sphere is
+## fixed — fov alone drives apparent size here).
+func _on_fov_changed(fov: float) -> void:
+	if _mat:
+		_mat.set_shader_parameter("fov_scale", tan(deg_to_rad(fov) * 0.5) / _ref_tan)
 
 func _apply_segment_transform(i: int, radius: float) -> void:
 	var a: Vector3 = _pairs[i][0]
 	var b: Vector3 = _pairs[i][1]
-	var mid := (a + b) * 0.5
 	var dir := b - a
-	var length := dir.length()
-	var rot := Quaternion(Vector3.UP, dir.normalized())
+	var full_length := dir.length()
+	var dir_norm := dir.normalized()
+	## Trim both ends by star_gap (clamped so short segments don't invert) to leave
+	## the star markers uncovered instead of buried under the line's endpoint.
+	var gap: float = min(star_gap, full_length * 0.5 - 0.001)
+	var trimmed_a := a + dir_norm * gap
+	var trimmed_b := b - dir_norm * gap
+	var mid := (trimmed_a + trimmed_b) * 0.5
+	var length := full_length - gap * 2.0
+	var rot := Quaternion(Vector3.UP, dir_norm)
 	var basis := Basis(rot) * Basis.from_scale(Vector3(radius, length, radius))
 	multimesh.set_instance_transform(i, Transform3D(basis, mid))
 

@@ -56,6 +56,15 @@ static func angular_dist_to_segment_deg(ra_deg: float, dec_deg: float, ra1_deg: 
 		return rad_to_deg(p.angle_to(p_proj))  # projection falls within the arc
 	return rad_to_deg(minf(p.angle_to(a), p.angle_to(b)))  # falls outside -> nearest endpoint
 
+## Average unit-vector direction of a constellation's line-segment endpoints, converted
+## back to RA/Dec. Used as that constellation's "center" for altitude/visibility checks.
+static func constellation_center(segments: Array) -> Vector2:
+	var center_sum := Vector3.ZERO
+	for seg in segments:
+		center_sum += ra_dec_to_vector3(seg[0], seg[1], 1.0)
+		center_sum += ra_dec_to_vector3(seg[2], seg[3], 1.0)
+	return vector3_to_ra_dec(center_sum.normalized())
+
 ## Julian Date (UT) from a Unix timestamp. JD is the day-count astronomical formulas
 ## (GMST, precession, etc.) are built on.
 static func julian_date_from_unix(unix_time: float) -> float:

@@ -5,24 +5,26 @@ extends MultiMeshInstance3D
 ## stars desaturate toward white (matches how the human eye loses color perception in
 ## low light), and how faint a star can be before it disappears depends on current zoom
 ## (wide view hides clutter, zooming in reveals fainter stars) — except stars that anchor
-## a constellation's line figure, which stay visible at any zoom so shapes don't break apart.
-## Expects res://data/stars.json: [{ "id", "ra", "dec", "mag", "ci", "name"?, "con"? }, ...]
+## a constellation's line figure, which stay visible at any zoom so shapes don't break apart
+## -- membership comes from ConstellationSets.hip_ids for the currently active set, not
+## anything baked into the catalog, so it follows the player's set choice live.
+## Expects res://data/stars.json: [{ "id", "ra", "dec", "mag", "ci", "name"? }, ...]
 
 @export var data_path := "res://data/stars.json"
-@export var faintest_mag := 6.5  ## naked-eye limit; absolute cap regardless of zoom
-@export var zoomed_out_mag_cutoff := 3.3  ## brightest-only cutoff at max_fov (fully zoomed out)
+@export var faintest_mag := 8.0  ## naked-eye limit; absolute cap regardless of zoom
+@export var zoomed_out_mag_cutoff := 4.78  ## brightest-only cutoff at max_fov (fully zoomed out)
 @export var brightest_anchor_mag := -1.46  ## Sirius; maps to max size/brightness
-@export var base_point_size := 10.0
-@export var min_visible_scale := 0.18  ## faintest stars: tiny pinpoints, not visible disks
-@export var max_scale := 6.0  ## only the very brightest (Sirius-tier) should reach this
-@export var size_gamma := 2.5  ## >1 = only near-Sirius stars get big; mid-bright (Vega-tier) stay modest
-@export var min_visible_alpha := 0.3
-@export var alpha_gamma := 0.35  ## <1 = alpha saturates toward 1 fast, so most visible stars read as
+@export var base_point_size := 4.58
+@export var min_visible_scale := 0.14  ## faintest stars: tiny pinpoints, not visible disks
+@export var max_scale := 14.0  ## only the very brightest (Sirius-tier) should reach this
+@export var size_gamma := 0.88  ## >1 = only near-Sirius stars get big; mid-bright (Vega-tier) stay modest
+@export var min_visible_alpha := 0.53
+@export var alpha_gamma := 2.0  ## <1 = alpha saturates toward 1 fast, so most visible stars read as
 ## crisp white/bright instead of a dim gray blend against the black background — under additive
 ## blending, brightness comes from color*alpha, and a low alpha mutes even a boosted color to gray.
 ## Contrast between stars now comes mainly from SIZE (size_gamma/max_scale), not from dimming alpha.
-@export var desaturate_dim_stars := 0.45  ## 0=full color at all brightness, 1=faintest stars fully white
-@export var brightness_boost := 0.8  ## pushes bright-star color past 1.0 so their additive core overexposes wider/whiter, like a real photo
+@export var desaturate_dim_stars := 0.0  ## 0=full color at all brightness, 1=faintest stars fully white
+@export var brightness_boost := 2.0  ## pushes bright-star color past 1.0 so their additive core overexposes wider/whiter, like a real photo
 @export var only_constellation_stars := false  ## quiz Easy/Medium: hide every star not part of a constellation
 
 @onready var camera_rig: CameraRig = $"../../CameraRig"
@@ -37,6 +39,7 @@ var _quad: QuadMesh  ## kept around so the debug settings panel can live-resize 
 func _ready() -> void:
 	if GameState.mode == GameState.Mode.QUIZ and GameState.difficulty != GameState.Difficulty.HARD:
 		only_constellation_stars = true
+	ConstellationSets.set_changed.connect(reload)
 	_load_stars()
 	if camera_rig:
 		camera_rig.fov_changed.connect(_on_fov_changed)
@@ -104,7 +107,7 @@ func _load_stars() -> void:
 		push_error("StarField: failed to parse %s" % data_path)
 		return
 
-	loaded_stars = stars.filter(func(s): return s["mag"] <= faintest_mag and (not only_constellation_stars or s.get("con", false)))
+	loaded_stars = stars.filter(func(s): return s["mag"] <= faintest_mag and (not only_constellation_stars or ConstellationSets.hip_ids.has(s["id"])))
 
 	var quad := QuadMesh.new()
 	quad.size = Vector2(base_point_size, base_point_size)
@@ -150,7 +153,7 @@ func _load_stars() -> void:
 	for i in loaded_stars.size():
 		var s: Dictionary = loaded_stars[i]
 		_mags[i] = s["mag"]
-		_is_constellation_star[i] = 1 if s.get("con", false) else 0
+		_is_constellation_star[i] = 1 if ConstellationSets.hip_ids.has(s["id"]) else 0
 
 	_quad = quad
 	refresh_visuals()

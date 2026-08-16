@@ -34,62 +34,84 @@ func _build_ui() -> void:
 	root.add_theme_constant_override("separation", 14)
 	scroll.add_child(root)
 
+	root.add_child(_heading("Constellation Set"))
+	root.add_child(_constellation_set_dropdown())
+	root.add_child(HSeparator.new())
+
 	root.add_child(_heading("Realism Settings"))
 
 	root.add_child(_checkbox("Constellation lines", constellation_lines.visible, func(v): constellation_lines.visible = v))
 	root.add_child(_checkbox("Constellation names", constellation_name_labels.visible, func(v): constellation_name_labels.visible = v))
 	root.add_child(_checkbox("Star names", star_labels.visible, func(v): star_labels.visible = v))
 
-	root.add_child(HSeparator.new())
-	root.add_child(_heading("Color"))
-	root.add_child(_slider("Color saturation", 0.0, 1.0, 1.0 - star_field.desaturate_dim_stars, func(v):
-		star_field.desaturate_dim_stars = 1.0 - v
-		star_field.refresh_visuals()
-	))
+	if GameState.dev_mode:
+		root.add_child(HSeparator.new())
+		root.add_child(_heading("Color"))
+		root.add_child(_slider("Color saturation", 0.0, 1.0, 1.0 - star_field.desaturate_dim_stars, func(v):
+			star_field.desaturate_dim_stars = 1.0 - v
+			star_field.refresh_visuals()
+		))
 
-	root.add_child(HSeparator.new())
-	root.add_child(_heading("Brightness"))
-	root.add_child(_slider("Brightness contrast", 0.2, 2.0, star_field.alpha_gamma, func(v):
-		star_field.alpha_gamma = v
-		star_field.refresh_visuals()
-	))
-	root.add_child(_slider("Minimum brightness", 0.0, 1.0, star_field.min_visible_alpha, func(v):
-		star_field.min_visible_alpha = v
-		star_field.refresh_visuals()
-	))
-	root.add_child(_slider("Brightness boost (bright stars)", 0.0, 2.0, star_field.brightness_boost, func(v):
-		star_field.brightness_boost = v
-		star_field.refresh_visuals()
-	))
+		root.add_child(HSeparator.new())
+		root.add_child(_heading("Brightness"))
+		root.add_child(_slider("Brightness contrast", 0.2, 2.0, star_field.alpha_gamma, func(v):
+			star_field.alpha_gamma = v
+			star_field.refresh_visuals()
+		))
+		root.add_child(_slider("Minimum brightness", 0.0, 1.0, star_field.min_visible_alpha, func(v):
+			star_field.min_visible_alpha = v
+			star_field.refresh_visuals()
+		))
+		root.add_child(_slider("Brightness boost (bright stars)", 0.0, 2.0, star_field.brightness_boost, func(v):
+			star_field.brightness_boost = v
+			star_field.refresh_visuals()
+		))
 
-	root.add_child(HSeparator.new())
-	root.add_child(_heading("Size / Halo"))
-	root.add_child(_slider("Halo point size", 3.0, 24.0, star_field.base_point_size, func(v):
-		star_field.set_base_point_size(v)
-	))
-	root.add_child(_slider("Max star size", 1.0, 14.0, star_field.max_scale, func(v):
-		star_field.max_scale = v
-		star_field.refresh_visuals()
-	))
-	root.add_child(_slider("Min star size", 0.05, 3.0, star_field.min_visible_scale, func(v):
-		star_field.min_visible_scale = v
-		star_field.refresh_visuals()
-	))
-	root.add_child(_slider("Size contrast", 0.5, 5.0, star_field.size_gamma, func(v):
-		star_field.size_gamma = v
-		star_field.refresh_visuals()
-	))
+		root.add_child(HSeparator.new())
+		root.add_child(_heading("Size / Halo"))
+		root.add_child(_slider("Halo point size", 3.0, 24.0, star_field.base_point_size, func(v):
+			star_field.set_base_point_size(v)
+		))
+		root.add_child(_slider("Max star size", 1.0, 14.0, star_field.max_scale, func(v):
+			star_field.max_scale = v
+			star_field.refresh_visuals()
+		))
+		root.add_child(_slider("Min star size", 0.05, 3.0, star_field.min_visible_scale, func(v):
+			star_field.min_visible_scale = v
+			star_field.refresh_visuals()
+		))
+		root.add_child(_slider("Size contrast", 0.5, 5.0, star_field.size_gamma, func(v):
+			star_field.size_gamma = v
+			star_field.refresh_visuals()
+		))
 
-	root.add_child(HSeparator.new())
-	root.add_child(_heading("Star density vs. zoom"))
-	root.add_child(_slider("Zoomed-out cutoff (mag)", -1.0, 6.5, star_field.zoomed_out_mag_cutoff, func(v):
-		star_field.zoomed_out_mag_cutoff = v
-		star_field.reapply_mag_cutoff()
-	))
-	root.add_child(_slider("Naked-eye cap (mag)", 2.0, 8.0, star_field.faintest_mag, func(v):
-		star_field.faintest_mag = v
-		star_field.reload()
-	))
+		root.add_child(HSeparator.new())
+		root.add_child(_heading("Star density vs. zoom"))
+		root.add_child(_slider("Zoomed-out cutoff (mag)", -1.0, 6.5, star_field.zoomed_out_mag_cutoff, func(v):
+			star_field.zoomed_out_mag_cutoff = v
+			star_field.reapply_mag_cutoff()
+		))
+		root.add_child(_slider("Naked-eye cap (mag)", 2.0, 8.0, star_field.faintest_mag, func(v):
+			star_field.faintest_mag = v
+			star_field.reload()
+		))
+
+## Sky-culture picker: switches ConstellationLines/StarField/ConstellationNameLabels
+## live and persists the choice as the startup default (ConstellationSets.set_active).
+func _constellation_set_dropdown() -> OptionButton:
+	var opt := OptionButton.new()
+	var current_index := 0
+	for i in ConstellationSets.available.size():
+		var entry: Dictionary = ConstellationSets.available[i]
+		opt.add_item("%s (%s)" % [entry["name"], entry["region"]])
+		if entry["id"] == ConstellationSets.active_id:
+			current_index = i
+	opt.selected = current_index
+	opt.item_selected.connect(func(index: int):
+		var entry: Dictionary = ConstellationSets.available[index]
+		ConstellationSets.set_active(entry["id"])
+	)
+	return opt
 
 func _heading(text: String) -> Label:
 	var l := Label.new()

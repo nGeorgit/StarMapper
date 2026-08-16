@@ -12,7 +12,13 @@ extends Node3D
 func _ready() -> void:
 	if GameState.mode != GameState.Mode.EXPLORE:
 		return
+	ConstellationSets.set_changed.connect(_rebuild)
 	await get_tree().process_frame  # let ConstellationLines finish loading its JSON first
+	_rebuild()
+
+func _rebuild() -> void:
+	for child in get_children():
+		child.queue_free()
 	for c in constellation_lines.constellations:
 		_add_label(c)
 

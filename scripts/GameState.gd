@@ -8,12 +8,20 @@ enum QuizType { CONSTELLATIONS }
 enum Difficulty { EASY, MEDIUM, HARD }
 enum SkyChoice { NORTH, SOUTH, LOCATION }
 enum Season { WINTER, SUMMER, CURRENT }
+enum QuizLength { THIRTY, FIFTY, HUNDRED }
+
+const NORTH_LAT_DEG := 60.0
+const SOUTH_LAT_DEG := -60.0
+const MIN_VISIBLE_ALTITUDE_DEG := 10.0
 
 var mode: Mode = Mode.EXPLORE
 var quiz_type: QuizType = QuizType.CONSTELLATIONS
 var difficulty: Difficulty = Difficulty.EASY
 var sky_choice: SkyChoice = SkyChoice.LOCATION
 var season: Season = Season.CURRENT
+var quiz_length: QuizLength = QuizLength.HUNDRED
+var quiz_round_count: int = 10
+var dev_mode: bool = false
 
 func _ready() -> void:
 	for arg in OS.get_cmdline_args():

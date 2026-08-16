@@ -1,0 +1,61 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/QuizLengthMenu.gd" id="1_quizlength"]
+
+[node name="QuizLengthMenu" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_quizlength")
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.0, 0.0, 0.02, 1.0)
+
+[node name="BackButton" type="Button" parent="."]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 120.0
+offset_bottom = 64.0
+theme_override_font_sizes/font_size = 20
+text = "Back"
+
+[node name="VBox" type="VBoxContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -170.0
+offset_right = 220.0
+offset_bottom = 170.0
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="VBox"]
+theme_override_font_sizes/font_size = 40
+horizontal_alignment = 1
+text = "Quiz Length"
+
+[node name="Subtitle" type="Label" parent="VBox"]
+theme_override_colors/font_color = Color(0.65, 0.65, 0.7, 1.0)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+text = "How many constellations?"
+
+[node name="Spacer" type="Control" parent="VBox"]
+custom_minimum_size = Vector2(0, 12)
+
+[node name="ThirtyButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 64)
+theme_override_font_sizes/font_size = 22
+text = "..."
+
+[node name="FiftyButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 64)
+theme_override_font_sizes/font_size = 22
+text = "..."
+
+[node name="HundredButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 64)
+theme_override_font_sizes/font_size = 22
+text = "..."

@@ -1,5 +1,5 @@
 extends Control
-## Quiz step 2/4: difficulty. Controls how much help the sky gives during the quiz —
+## Quiz step 4/6: difficulty. Controls how much help the sky gives during the quiz —
 ## applied by StarField/ConstellationLines/StarLabels in Main.tscn by reading
 ## GameState.difficulty, not here (this screen just records the pick).
 ##
@@ -15,7 +15,7 @@ func _ready() -> void:
 
 func _on_pressed(difficulty: GameState.Difficulty) -> void:
 	GameState.difficulty = difficulty
-	get_tree().change_scene_to_file("res://scenes/SkyMenu.tscn")
+	get_tree().change_scene_to_file("res://scenes/SeasonMenu.tscn")
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/QuizTypeMenu.tscn")
+	get_tree().change_scene_to_file("res://scenes/CultureMenu.tscn")

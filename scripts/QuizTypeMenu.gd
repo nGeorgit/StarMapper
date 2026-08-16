@@ -7,7 +7,7 @@ func _ready() -> void:
 
 func _on_constellations_pressed() -> void:
 	GameState.quiz_type = GameState.QuizType.CONSTELLATIONS
-	get_tree().change_scene_to_file("res://scenes/DifficultyMenu.tscn")
+	get_tree().change_scene_to_file("res://scenes/SkyMenu.tscn")
 
 func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")

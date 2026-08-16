@@ -165,8 +165,8 @@ func _set_fov(fov: float) -> void:
 	fov_changed.emit(camera.fov)
 
 func _apply_look_delta(delta: Vector2) -> void:
-	_yaw -= delta.x * look_speed * 0.01
-	_pitch = clamp(_pitch - delta.y * look_speed * 0.01, deg_to_rad(-pitch_limit_deg), deg_to_rad(pitch_limit_deg))
+	_yaw += delta.x * look_speed * 0.01
+	_pitch = clamp(_pitch + delta.y * look_speed * 0.01, deg_to_rad(-pitch_limit_deg), deg_to_rad(pitch_limit_deg))
 	rotation = Vector3(_pitch, _yaw, 0.0)
 
 ## Smoothly rotates the rig so the given RA/Dec point ends up centered in view (quiz

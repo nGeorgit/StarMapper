@@ -12,7 +12,7 @@ signal round_result(correct: bool, constellation_name: String)
 @export var hit_threshold_deg := 6.0
 @export var tap_move_tolerance_px := 20.0  ## press-release drift under this counts as a tap, not a pan
 @export var quiz_round_total := 10
-@export var min_visible_altitude_deg := 10.0  ## constellation center must be at least this high to be quizzed
+@export var min_visible_altitude_deg := GameState.MIN_VISIBLE_ALTITUDE_DEG  ## constellation center must be at least this high to be quizzed
 @export var reveal_pause_sec := 2.0  ## time the pan-to-target + highlight stays up before advancing
 
 @onready var camera_rig: CameraRig = $"../CameraRig"
@@ -32,6 +32,7 @@ var _round_index := 0  ## how many rounds have been started
 var _correct_count := 0
 var _quiz_done := false
 var _accepting_input := true  ## false while a wrong-answer message is showing, to block double taps
+var _all_answers: Array = []  ## track all constellation names selected
 
 func _ready() -> void:
 	back_button.pressed.connect(_go_to_menu)
@@ -44,6 +45,9 @@ func _ready() -> void:
 
 	play_again_button.pressed.connect(_restart_quiz)
 	menu_button.pressed.connect(_go_to_menu)
+
+	if GameState.quiz_round_count > 0:
+		quiz_round_total = GameState.quiz_round_count
 
 	await get_tree().process_frame  # let ConstellationLines finish loading its JSON first
 	_quiz_pool = _visible_constellations()
@@ -69,6 +73,7 @@ func _restart_quiz() -> void:
 	_round_index = 0
 	_correct_count = 0
 	_quiz_done = false
+	_all_answers.clear()
 	results_panel.visible = false
 	target_label.visible = true
 	feedback_label.visible = true
@@ -82,6 +87,7 @@ func _start_round() -> void:
 		_show_results()
 		return
 	_target = _quiz_pool[_round_index]
+	_all_answers.append(_target["name"])
 	feedback_label.text = ""
 	target_label.text = "Find %d/%d: %s" % [_round_index + 1, _quiz_pool.size(), _target["name"]]
 
@@ -92,6 +98,15 @@ func _show_results() -> void:
 	feedback_label.visible = false
 	results_panel.visible = true
 	results_label.text = "You found %d/%d constellations!" % [_correct_count, _quiz_pool.size()]
+
+	_check_dev_mode_unlock()
+	_record_progress()
+
+func _record_progress() -> void:
+	if _quiz_pool.size() == 0:
+		return
+	QuizProgress.record_result(ConstellationSets.active_id, GameState.difficulty, GameState.sky_choice,
+			GameState.season, GameState.quiz_length, _correct_count, _quiz_pool.size())
 
 func _unhandled_input(event: InputEvent) -> void:
 	if GameState.mode != GameState.Mode.QUIZ or _quiz_done or not _accepting_input:
@@ -161,3 +176,10 @@ func _nearest_segment_dist(c: Dictionary, ra: float, dec: float) -> Dictionary:
 	if best_dist <= hit_threshold_deg:
 		return {"dist": best_dist}
 	return {}
+
+func _check_dev_mode_unlock() -> void:
+	if GameState.season == GameState.Season.SUMMER and \
+	   GameState.sky_choice == GameState.SkyChoice.NORTH and \
+	   _all_answers.size() == 10 and \
+	   _all_answers.all(func(name): return name == "Cassiopeia"):
+		GameState.dev_mode = true
