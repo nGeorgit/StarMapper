@@ -9,3 +9,4 @@ export/
 # large upstream sources, regenerate data/ from these instead of committing them
 resources/stellarium/
 resources/hyg/
+eso0932a.tif

@@ -28,6 +28,19 @@ from Stellarium's `modern_iau` skyculture dataset.
   Stellarium *application*, which is GPLv2 — no Stellarium program code is
   used or bundled by StarMapper, only this one skyculture data file)
 
+## Milky Way panorama background (`textures/milkyway_panorama.jpg`)
+
+The all-sky background image is ESO's Milky Way panorama.
+
+- Credit: ESO/S. Brunier
+- Source: https://www.eso.org/public/images/eso0932a/
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Split from the original 6000x3000 TIFF into 4 quadrant tiles
+  (`textures/milkyway_c{0,1}_r{0,1}.jpg`, 3000x1500 each) so the full source
+  resolution can be used without exceeding the ~4096px single-texture
+  dimension cap common on Android GPUs. Sampled back together into one sky
+  by `shaders/milkyway_sky.gdshader`.
+
 ## How the data is built
 
 `tools/parse_stellarium_data.py` reads local clones of the two repos above

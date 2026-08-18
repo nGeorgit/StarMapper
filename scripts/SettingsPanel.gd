@@ -47,6 +47,7 @@ func _build_ui() -> void:
 
 	root.add_child(_heading("Realism Settings"))
 
+	root.add_child(_checkbox("Rendered stars", star_field.visible, func(v): star_field.visible = v))
 	root.add_child(_checkbox("Constellation lines", constellation_lines.visible, func(v): constellation_lines.visible = v))
 	root.add_child(_checkbox("Constellation names", constellation_name_labels.visible, func(v): constellation_name_labels.visible = v))
 	root.add_child(_checkbox("Star names", star_labels.visible, func(v): star_labels.visible = v))

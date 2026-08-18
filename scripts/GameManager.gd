@@ -32,7 +32,7 @@ var _round_index := 0  ## how many rounds have been started
 var _correct_count := 0
 var _quiz_done := false
 var _accepting_input := true  ## false while a wrong-answer message is showing, to block double taps
-var _all_answers: Array = []  ## track all constellation names selected
+var _all_answers: Array = []  ## rolling window of the last constellations player tapped (dev-mode easter egg)
 
 func _ready() -> void:
 	back_button.pressed.connect(_go_to_menu)
@@ -93,7 +93,6 @@ func _start_round() -> void:
 		_show_results()
 		return
 	_target = _quiz_pool[_round_index]
-	_all_answers.append(_target["name"])
 	feedback_label.text = ""
 	target_label.text = "Find %d/%d: %s" % [_round_index + 1, _quiz_pool.size(), _target["name"]]
 
@@ -105,7 +104,6 @@ func _show_results() -> void:
 	results_panel.visible = true
 	results_label.text = "You found %d/%d constellations!" % [_correct_count, _quiz_pool.size()]
 
-	_check_dev_mode_unlock()
 	_record_progress()
 
 func _record_progress() -> void:
@@ -135,11 +133,17 @@ func _check_tap(screen_pos: Vector2) -> void:
 	var correct := _is_within_target(ra_dec.x, ra_dec.y)
 	round_result.emit(correct, _target["name"])
 
+	var picked := _find_constellation_at(ra_dec.x, ra_dec.y)
+	if not picked.is_empty():
+		_all_answers.append(picked["name"])
+		if _all_answers.size() > 10:
+			_all_answers.pop_front()
+		_check_dev_mode_unlock()
+
 	if correct:
 		feedback_label.text = "Correct!"
 		_correct_count += 1
 	else:
-		var picked := _find_constellation_at(ra_dec.x, ra_dec.y)
 		if picked.is_empty():
 			feedback_label.text = "Wrong — that wasn't %s" % _target["name"]
 		else:
@@ -184,8 +188,6 @@ func _nearest_segment_dist(c: Dictionary, ra: float, dec: float) -> Dictionary:
 	return {}
 
 func _check_dev_mode_unlock() -> void:
-	if GameState.season == GameState.Season.SUMMER and \
-	   GameState.sky_choice == GameState.SkyChoice.NORTH and \
-	   _all_answers.size() == 10 and \
+	if _all_answers.size() == 10 and \
 	   _all_answers.all(func(name): return name == "Cassiopeia"):
 		GameState.dev_mode = true

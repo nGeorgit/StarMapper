@@ -12,6 +12,13 @@ extends Node3D
 
 var _accum := 0.0
 
+@onready var _world_environment: WorldEnvironment = $"../WorldEnvironment"
+## Environment.sky_rotation does not drive a custom shader_type sky material's EYEDIR
+## (confirmed empirically -- see shaders/milkyway_sky.gdshader), so the world->equatorial
+## un-rotation is passed to it explicitly as a uniform instead, updated alongside this
+## node's own basis every tick.
+@onready var _milkyway_material: ShaderMaterial = _world_environment.environment.sky.sky_material
+
 func _ready() -> void:
 	_update_basis()
 
@@ -24,3 +31,4 @@ func _process(delta: float) -> void:
 
 func _update_basis() -> void:
 	basis = Observer.horizontal_basis()
+	_milkyway_material.set_shader_parameter("equatorial_from_world", basis.inverse())

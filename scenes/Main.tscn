@@ -1,5 +1,10 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=25 format=3]
 
+[ext_resource type="Shader" path="res://shaders/milkyway_sky.gdshader" id="0_mwshader"]
+[ext_resource type="Texture2D" path="res://textures/milkyway_c0_r0.jpg" id="0_mw_c0r0"]
+[ext_resource type="Texture2D" path="res://textures/milkyway_c1_r0.jpg" id="0_mw_c1r0"]
+[ext_resource type="Texture2D" path="res://textures/milkyway_c0_r1.jpg" id="0_mw_c0r1"]
+[ext_resource type="Texture2D" path="res://textures/milkyway_c1_r1.jpg" id="0_mw_c1r1"]
 [ext_resource type="Script" path="res://scripts/CameraRig.gd" id="1_camrig"]
 [ext_resource type="Script" path="res://scripts/StarField.gd" id="2_starfield"]
 [ext_resource type="Script" path="res://scripts/ConstellationLines.gd" id="3_conlines"]
@@ -15,17 +20,41 @@
 [ext_resource type="Script" path="res://scripts/AltAzGrid.gd" id="13_altazgrid"]
 [ext_resource type="Script" path="res://scripts/CompassLabels.gd" id="14_compass"]
 [ext_resource type="Script" path="res://scripts/ObserverInfoLabel.gd" id="15_obsinfo"]
+[ext_resource type="Script" path="res://scripts/DebugClickLogger.gd" id="16_debugclick"]
+[ext_resource type="Script" path="res://scripts/MilkywayTuner.gd" id="17_mwtuner"]
+[ext_resource type="Script" path="res://scripts/MilkywayOpacity.gd" id="18_mwopacity"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_milkyway"]
+shader = ExtResource("0_mwshader")
+shader_parameter/tile_c0_r0 = ExtResource("0_mw_c0r0")
+shader_parameter/tile_c1_r0 = ExtResource("0_mw_c1r0")
+shader_parameter/tile_c0_r1 = ExtResource("0_mw_c0r1")
+shader_parameter/tile_c1_r1 = ExtResource("0_mw_c1r1")
+
+[sub_resource type="Sky" id="Sky_milkyway"]
+sky_material = SubResource("ShaderMaterial_milkyway")
 
 [sub_resource type="Environment" id="Environment_sky"]
-background_mode = 1
-background_color = Color(0.0, 0.0, 0.02, 1.0)
+background_mode = 2
+sky = SubResource("Sky_milkyway")
+background_energy_multiplier = 0.17
 ambient_light_source = 2
 ambient_light_color = Color(0, 0, 0, 1)
+glow_enabled = true
+glow_intensity = 1.2
+glow_strength = 1.1
+glow_bloom = 0.0
+glow_hdr_threshold = 0.95
+glow_hdr_scale = 2.0
+glow_blend_mode = 0
+glow_levels/1 = true
+glow_levels/3 = false
 
 [node name="Main" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_sky")
+script = ExtResource("18_mwopacity")
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("1_camrig")
@@ -67,6 +96,12 @@ script = ExtResource("4_gamemgr")
 
 [node name="ScreenshotAndQuit" type="Node" parent="."]
 script = ExtResource("5_screenshot")
+
+[node name="DebugClickLogger" type="Node" parent="."]
+script = ExtResource("16_debugclick")
+
+[node name="MilkywayTuner" type="Node" parent="."]
+script = ExtResource("17_mwtuner")
 
 [node name="UI" type="CanvasLayer" parent="."]
 

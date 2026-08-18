@@ -16,15 +16,18 @@ extends MultiMeshInstance3D
 @export var brightest_anchor_mag := -1.46  ## Sirius; maps to max size/brightness
 @export var base_point_size := 4.58
 @export var min_visible_scale := 0.14  ## faintest stars: tiny pinpoints, not visible disks
-@export var max_scale := 14.0  ## only the very brightest (Sirius-tier) should reach this
+@export var max_scale := 9.0  ## only the very brightest (Sirius-tier) should reach this
 @export var size_gamma := 0.88  ## >1 = only near-Sirius stars get big; mid-bright (Vega-tier) stay modest
-@export var min_visible_alpha := 0.53
+@export var min_visible_alpha := 1.0
 @export var alpha_gamma := 2.0  ## <1 = alpha saturates toward 1 fast, so most visible stars read as
 ## crisp white/bright instead of a dim gray blend against the black background — under additive
 ## blending, brightness comes from color*alpha, and a low alpha mutes even a boosted color to gray.
 ## Contrast between stars now comes mainly from SIZE (size_gamma/max_scale), not from dimming alpha.
 @export var desaturate_dim_stars := 0.0  ## 0=full color at all brightness, 1=faintest stars fully white
-@export var brightness_boost := 2.0  ## pushes bright-star color past 1.0 so their additive core overexposes wider/whiter, like a real photo
+@export var brightness_boost := 1.4  ## pushes bright-star color past 1.0 so their additive core overexposes wider/whiter, like a real photo
+@export var boost_gamma := 0.35  ## <1 ramps small/mid stars' glow boost up fast while capping
+## how much further big stars climb, so glow reads evenly across star sizes instead of
+## concentrating on the biggest few (Arcturus-tier) and skipping the rest
 @export var only_constellation_stars := false  ## quiz Easy/Medium: hide every star not part of a constellation
 @export var is_background := false  ## true for decorative menu-background instances: always
 ## renders full explore-mode richness, ignoring GameState.mode (which reflects the real
@@ -73,7 +76,10 @@ func refresh_visuals() -> void:
 		var alpha: float = lerp(min_visible_alpha, 1.0, pow(unit, alpha_gamma))
 		var true_color: Color = StarColor.bv_to_rgb(s.get("ci", 0.65))
 		var color: Color = true_color.lerp(Color.WHITE, (1.0 - unit) * desaturate_dim_stars)
-		var boost := 1.0 + unit * brightness_boost  # >1 lets additive blend overexpose bright cores
+		var boost: float = lerp(1.15, 1.0 + brightness_boost, pow(unit, boost_gamma))  # floor keeps even the faintest
+		# visible star's color pushed past the Environment glow HDR threshold, so every star
+		# gets some glow, not just near-Sirius-tier ones; brighter stars overexpose further
+		# above threshold, so their glow reads stronger without a separate size-based system
 		_base_colors[i] = Color(color.r * boost, color.g * boost, color.b * boost, alpha)
 
 	if camera_rig:
@@ -193,11 +199,10 @@ func _make_glow_texture() -> GradientTexture2D:
 	var gradient := Gradient.new()
 	gradient.colors = PackedColorArray([
 		Color(1, 1, 1, 1),
-		Color(1, 1, 1, 0.9),
-		Color(1, 1, 1, 0.25),
+		Color(1, 1, 1, 1),
 		Color(1, 1, 1, 0),
 	])
-	gradient.offsets = PackedFloat32Array([0.0, 0.2, 0.55, 1.0])
+	gradient.offsets = PackedFloat32Array([0.0, 0.9, 1.0])
 
 	var tex := GradientTexture2D.new()
 	tex.gradient = gradient
