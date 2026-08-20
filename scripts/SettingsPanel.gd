@@ -14,16 +14,34 @@ extends PanelContainer
 @onready var compass_labels: Node3D = $"../../CompassLabels"
 @onready var observer_info_label: Label = $"../ObserverInfoLabel"
 @onready var toggle_button: Button = $"../SettingsButton"
+@onready var camera_rig: CameraRig = $"../../CameraRig"
 
 func _ready() -> void:
 	visible = false
 	if GameState.mode == GameState.Mode.QUIZ:
 		toggle_button.visible = false  # this is an explore-mode debug panel; nothing here belongs in a quiz
 		return
-	custom_minimum_size = Vector2(578, 0)
+	grow_horizontal = Control.GROW_DIRECTION_BEGIN  # anchored to the right edge; grow leftward, not into it
 	add_theme_stylebox_override("panel", _panel_style())
 	_build_ui()
 	toggle_button.pressed.connect(func(): visible = not visible)
+	_fit_to_content()
+
+## Sizes the panel to its actual content (few checkboxes normally, many more
+## and wider rows when dev_mode adds the tuning sliders) instead of always
+## being a fixed wide/tall box. Caps height at the available viewport height
+## so the internal ScrollContainer takes over once dev_mode content overflows,
+## and caps width so a long dev-mode slider label can't push it off-screen.
+## Sets the ScrollContainer's own custom_minimum_size (its natural minimum
+## size ignores content, by design, so it never blocks scrolling) and then
+## lets the panel auto-fit to that, rather than poking this Control's size
+## directly, which raced the real layout pass and left a leftover gap.
+func _fit_to_content() -> void:
+	await get_tree().process_frame
+	var max_height := get_viewport_rect().size.y - offset_top - 40.0
+	var content_height := _content_root.get_combined_minimum_size().y
+	var content_width := _content_root.get_combined_minimum_size().x
+	_scroll.custom_minimum_size = Vector2(clampf(content_width, 280.0, 480.0), minf(content_height, max_height))
 
 func _panel_style() -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
@@ -36,10 +54,12 @@ func _build_ui() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 0)
 	add_child(scroll)
+	_scroll = scroll
 
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 14)
 	scroll.add_child(root)
+	_content_root = root
 
 	root.add_child(_heading("Constellation Set"))
 	root.add_child(_constellation_set_button())
@@ -55,6 +75,31 @@ func _build_ui() -> void:
 	root.add_child(_checkbox("Azimuth grid", alt_az_grid.visible, func(v): alt_az_grid.visible = v))
 	root.add_child(_checkbox("Compass letters", compass_labels.visible, func(v): compass_labels.visible = v))
 	root.add_child(_checkbox("Observer info", observer_info_label.visible, func(v): observer_info_label.visible = v))
+
+	## Only relevant while AR mode is on, so the whole section hides/shows as one
+	## block in step with the AR toggle button instead of cluttering the panel
+	## when the player is navigating by hand.
+	var ar_section := VBoxContainer.new()
+	ar_section.add_theme_constant_override("separation", 14)
+	root.add_child(ar_section)
+	ar_section.add_child(HSeparator.new())
+	ar_section.add_child(_heading("AR / Compass"))
+	ar_section.add_child(_slider("Compass offset", -180.0, 180.0, camera_rig.ar_heading_offset_deg, func(v):
+		camera_rig.set_ar_heading_offset(v)
+	))
+	if GameState.dev_mode:
+		var ar_debug_label := Label.new()
+		ar_debug_label.add_theme_font_size_override("font_size", 18)
+		ar_debug_label.text = "alt: --  az: --"
+		ar_section.add_child(ar_debug_label)
+		camera_rig.ar_debug_updated.connect(func(alt, az):
+			ar_debug_label.text = "alt: %.1f  az: %.1f" % [alt, az]
+		)
+	ar_section.visible = camera_rig.ar_mode_enabled
+	camera_rig.ar_mode_changed.connect(func(enabled):
+		ar_section.visible = enabled
+		_fit_to_content()
+	)
 
 	if GameState.dev_mode:
 		root.add_child(HSeparator.new())
@@ -113,12 +158,14 @@ func _build_ui() -> void:
 ## A native OptionButton's dropdown is unusably small with 30+ cultures on a touch
 ## screen, so this opens a full-screen list of big tappable rows instead.
 var _culture_button: Button
+var _content_root: VBoxContainer
+var _scroll: ScrollContainer
 
 func _constellation_set_button() -> Button:
 	var btn := Button.new()
 	btn.mouse_filter = Control.MOUSE_FILTER_PASS  # let touch-drag bubble to ScrollContainer for scrolling
 	btn.custom_minimum_size = Vector2(0, 68)
-	btn.add_theme_font_size_override("font_size", 22)
+	btn.add_theme_font_size_override("font_size", 24)
 	_culture_button = btn
 	_refresh_culture_button_text()
 	btn.pressed.connect(_open_culture_picker)
@@ -202,13 +249,15 @@ func _on_culture_picked(id: String, overlay: Control) -> void:
 func _heading(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_font_size_override("font_size", 22)
 	l.add_theme_color_override("font_color", Color(0.85, 0.9, 1.0))
 	return l
 
 func _checkbox(label_text: String, initial: bool, on_toggled: Callable) -> CheckBox:
 	var cb := CheckBox.new()
 	cb.mouse_filter = Control.MOUSE_FILTER_PASS  # let touch-drag bubble to ScrollContainer for scrolling
+	cb.custom_minimum_size = Vector2(0, 44)
+	cb.add_theme_font_size_override("font_size", 20)
 	cb.text = label_text
 	cb.button_pressed = initial
 	cb.toggled.connect(on_toggled)
@@ -223,9 +272,11 @@ func _slider(label_text: String, min_v: float, max_v: float, initial: float, on_
 
 	var label := Label.new()
 	label.text = "%s: %.2f" % [label_text, initial]
+	label.add_theme_font_size_override("font_size", 18)
 	box.add_child(label)
 
 	var slider := HSlider.new()
+	slider.custom_minimum_size = Vector2(0, 28)
 	slider.min_value = min_v
 	slider.max_value = max_v
 	slider.step = (max_v - min_v) / 200.0

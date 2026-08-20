@@ -41,6 +41,19 @@ The all-sky background image is ESO's Milky Way panorama.
   dimension cap common on Android GPUs. Sampled back together into one sky
   by `shaders/milkyway_sky.gdshader`.
 
+## Culture menu category icons (`assets/culture_icons/`)
+
+The Culture menu groups related skycultures (Chinese, Modern, Arabic, Greek,
+Babylonian) behind a single tile, each shown with a small glyph of one
+representative constellation from that group, drawn in the same dot-and-line
+style the app itself uses on the sky sphere (`ConstellationLines.gd`/
+`StarField.gd`). These are generated, not copied artwork -- built by
+`tools/generate_culture_icons.py` from each skyculture's own line/star
+position data (`data/constellation_sets/<id>.json`), the same data already
+shipped and used for gameplay by every culture in the Culture menu. See that
+skyculture's own `resources/stellarium/skycultures/<id>/description.md` for
+its specific license terms.
+
 ## How the data is built
 
 `tools/parse_stellarium_data.py` reads local clones of the two repos above

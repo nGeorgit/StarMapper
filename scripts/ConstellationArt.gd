@@ -16,6 +16,7 @@ extends Node3D
 @export var grid_subdivisions := 8  ## per axis; higher = smoother curvature for wide artwork
 @export var center_threshold_fov_frac := 0.35  ## artwork shows once its constellation's
 ## center comes within (camera fov * this) degrees of the screen center
+@export var fade_duration := 0.6  ## seconds for outgoing art to fade out / incoming to fade in
 @export var is_background := false  ## true for decorative menu-background instances: always
 ## shows art, ignoring GameState.mode (which reflects the real gameplay scene, not this
 ## decorative one)
@@ -24,7 +25,9 @@ extends Node3D
 @onready var camera_rig: CameraRig = $"../../CameraRig"
 
 var _meshes: Dictionary = {}  ## constellation id -> MeshInstance3D
+var _materials: Dictionary = {}  ## constellation id -> StandardMaterial3D (per-mesh instance)
 var _centers: Dictionary = {}  ## constellation id -> Vector2 (ra, dec)
+var _fade: Dictionary = {}  ## constellation id -> current fade-in amount, 0..1
 var _shown_id := ""
 
 func _ready() -> void:
@@ -34,16 +37,19 @@ func _ready() -> void:
 	await get_tree().process_frame  # let ConstellationLines finish loading its JSON first
 	_rebuild()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _meshes.is_empty() or not camera_rig:
 		return
 	_update_visible_art()
+	_update_fades(delta)
 
 func _rebuild() -> void:
 	for child in get_children():
 		child.queue_free()
 	_meshes.clear()
+	_materials.clear()
 	_centers.clear()
+	_fade.clear()
 	_shown_id = ""
 
 	for c in constellation_lines.constellations:
@@ -55,7 +61,9 @@ func _rebuild() -> void:
 		mesh_inst.visible = false
 		add_child(mesh_inst)
 		_meshes[c["id"]] = mesh_inst
+		_materials[c["id"]] = mesh_inst.mesh.surface_get_material(0)
 		_centers[c["id"]] = c["center"]
+		_fade[c["id"]] = 0.0
 
 func _update_visible_art() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
@@ -72,14 +80,25 @@ func _update_visible_art() -> void:
 			best_dist = dist
 			best_id = id
 
-	var winner := best_id if best_dist <= threshold_deg else ""
-	if winner == _shown_id:
-		return
-	if _shown_id != "":
-		_meshes[_shown_id].visible = false
-	if winner != "":
-		_meshes[winner].visible = true
-	_shown_id = winner
+	_shown_id = best_id if best_dist <= threshold_deg else ""
+
+## Crossfades every constellation's art toward 1.0 alpha if it's `_shown_id`, else toward
+## 0.0, instead of the old hard visible-swap -- so the outgoing art fades out while the
+## incoming one fades in, rather than popping between them.
+func _update_fades(delta: float) -> void:
+	var step := delta / fade_duration if fade_duration > 0.0 else 1.0
+	for id in _meshes:
+		var target := 1.0 if id == _shown_id else 0.0
+		var amount: float = _fade[id]
+		amount = move_toward(amount, target, step)
+		_fade[id] = amount
+
+		var mesh_inst: MeshInstance3D = _meshes[id]
+		mesh_inst.visible = amount > 0.0
+		if amount > 0.0:
+			var mat: StandardMaterial3D = _materials[id]
+			var c := mat.albedo_color
+			mat.albedo_color = Color(c.r, c.g, c.b, art_alpha * amount)
 
 ## Builds one constellation's artwork as a curved grid mesh on the sphere: each grid
 ## vertex's pixel position is mapped to sky-space via barycentric coordinates in the

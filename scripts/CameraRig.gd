@@ -23,7 +23,14 @@ extends Node3D
 ## reality. No auto figure-8 calibration flow yet.
 @export var ar_heading_offset_deg := 0.0
 
+## Raw gravity/magnetometer readings are noisy frame to frame, which reads as the
+## sky jittering; slerp toward the sensor-derived orientation instead of snapping to
+## it. Higher = snappier/more jitter, lower = smoother/more lag. Frame-rate independent.
+@export var ar_smoothing_speed := 8.0
+
 signal fov_changed(fov: float)
+signal ar_mode_changed(enabled: bool)
+signal ar_debug_updated(alt_deg: float, az_deg: float)  ## dev-only readout, see SettingsPanel
 
 @onready var camera: Camera3D = $Camera3D
 @onready var sky_root: Node3D = $"../SkyRoot"
@@ -49,14 +56,20 @@ func _ready() -> void:
 		## instead of snapping to (0, 0, 0) on the first auto-pan _process tick.
 		_pitch = rotation.x
 		_yaw = rotation.y
+		return
+	# Quiz mode needs pan_to_ra_dec's reveal-pan to work, which AR mode disables,
+	# so Quiz never inherits a persisted AR-on state from Explore.
+	ar_heading_offset_deg = GameState.ar_heading_offset_deg
+	if GameState.ar_mode_enabled and GameState.mode != GameState.Mode.QUIZ:
+		set_ar_mode(true)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if auto_pan_enabled:
 		return  # decorative menu background -- never steals drag/zoom input
-	if ar_mode_enabled:
-		return  # orientation comes from sensors in _process; ignore drag/swipe look
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
+			if ar_mode_enabled:
+				return  # orientation comes from sensors; no drag-look, but zoom below still works
 			_dragging = event.pressed
 			_last_pos = event.position
 			if event.pressed:
@@ -66,6 +79,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_zoom_by(1.0 / zoom_step)
 	elif event is InputEventMouseMotion and _dragging:
+		if ar_mode_enabled:
+			return
 		_apply_look_delta(event.position - _last_pos)
 		_velocity = event.position - _last_pos
 		_last_pos = event.position
@@ -80,7 +95,7 @@ func _process(delta: float) -> void:
 		rotation = Vector3(_pitch, _yaw, 0.0)
 		return
 	if ar_mode_enabled:
-		_apply_ar_orientation()
+		_apply_ar_orientation(delta)
 		return
 	if _dragging or _touches.size() > 0:
 		return
@@ -101,32 +116,47 @@ func set_ar_mode(enabled: bool) -> void:
 		_pitch = clamp(euler.x, deg_to_rad(-pitch_limit_deg), deg_to_rad(pitch_limit_deg))
 		_yaw = euler.y
 		_velocity = Vector2.ZERO
+	ar_mode_changed.emit(enabled)
 
 func adjust_ar_heading_offset(delta_deg: float) -> void:
 	ar_heading_offset_deg = fmod(ar_heading_offset_deg + delta_deg, 360.0)
 
-## Orients the rig from the accelerometer (device "up", i.e. -gravity) and magnetometer
-## (magnetic north), the same sensor pair real planetarium apps use for AR mode — no
-## gyroscope integration drift, because it's read as an absolute orientation every
-## frame rather than accumulated.
+func set_ar_heading_offset(deg: float) -> void:
+	ar_heading_offset_deg = fmod(deg, 360.0)
+
+## False on desktop or any device missing a magnetometer -- AR mode would just
+## silently freeze on the last pose forever, so callers should gray out the
+## AR toggle instead of switching it on.
+func has_ar_sensors() -> bool:
+	return Input.get_gravity().length() >= 0.01 and Input.get_magnetometer().length() >= 0.01
+
+## Orients the rig from the accelerometer (device "up") and magnetometer (magnetic
+## north), the same sensor pair real planetarium apps use for AR mode — no gyroscope
+## integration drift, because it's read as an absolute orientation every frame rather
+## than accumulated.
 ##
-## Godot/Android report the gravity vector pointing away from the ground (up) when the
-## device is at rest, magnitude ~9.8; magnetometer reports the ambient magnetic field,
-## which points roughly at magnetic north but tilted down into the ground by however
-## much local magnetic inclination is. Projecting the magnetometer reading onto the
-## plane perpendicular to "up" removes that tilt and leaves compass heading.
+## Input.get_gravity() reports the true gravity vector, pointing *toward* the ground
+## (Godot docs: "measured... away from the center of the Earth, which is a negative
+## Y value" -- i.e. it already points down), so it has to be negated to get device
+## "up". Godot/Android's magnetometer reading points roughly toward magnetic *south*
+## (opposite the usual raw-sensor convention), tilted down/up into the ground by
+## however much local magnetic inclination is, so it's negated below to get a
+## north-pointing vector. Projecting onto the plane perpendicular to "up" then
+## removes the inclination tilt and leaves compass heading.
 ##
-## Unverified on real hardware (no device available while writing this) — if the sky
-## doesn't track the phone correctly, ar_heading_offset_deg is the first thing to try
-## adjusting, since sign/axis conventions can vary by platform.
-func _apply_ar_orientation() -> void:
-	var up_device := Input.get_gravity()
+## east_device/up_device/north_device are the world East/Up/North axes as measured
+## in the device's own local coordinate frame -- i.e. they describe a world-to-device
+## rotation. CameraRig.basis needs the opposite (device-to-world), so the camera's
+## local forward maps to the world direction the phone is actually pointing; for an
+## orthonormal rotation the inverse is just the transpose.
+func _apply_ar_orientation(delta: float) -> void:
+	var up_device := -Input.get_gravity()
 	var mag_device := Input.get_magnetometer()
 	if up_device.length() < 0.01 or mag_device.length() < 0.01:
 		return  # no sensor data (desktop, or device lacks a magnetometer) — hold last pose
 	up_device = up_device.normalized()
 
-	var north_device := (mag_device - up_device * mag_device.dot(up_device))
+	var north_device := -(mag_device - up_device * mag_device.dot(up_device))
 	if north_device.length() < 0.01:
 		return  # magnetometer reading points straight along "up" (degenerate) — skip this frame
 	north_device = north_device.normalized()
@@ -135,7 +165,26 @@ func _apply_ar_orientation() -> void:
 
 	var east_device := north_device.cross(up_device)  # E x N = U convention -> N x U = E
 
-	basis = Basis(east_device, up_device, -north_device)  # -north = "back" so forward(-Z) = north
+	# -north = "back" so forward(-Z) = north; .transposed() converts the world-to-device
+	# rotation above into the device-to-world rotation CameraRig.basis needs.
+	var target_basis := Basis(east_device, up_device, -north_device).transposed()
+
+	# Raw sensor readings are noisy frame to frame -- slerp toward the target
+	# orientation instead of snapping to it, so that noise reads as a slight softness
+	# rather than a visible jitter. clamp keeps a low framerate from overshooting.
+	var target_quat := Quaternion(target_basis).normalized()
+	var current_quat := Quaternion(basis).normalized()
+	basis = Basis(current_quat.slerp(target_quat, clamp(delta * ar_smoothing_speed, 0.0, 1.0)))
+
+	# Dev-only readout (SettingsPanel), computed from the same world convention as
+	# AltAzGrid/CompassLabels: world Y = zenith, -Z = north, +X = east, azimuth
+	# clockwise from north.
+	var forward := -basis.z
+	var alt_deg := rad_to_deg(asin(clamp(forward.y, -1.0, 1.0)))
+	var az_deg := rad_to_deg(atan2(forward.x, -forward.z))
+	if az_deg < 0.0:
+		az_deg += 360.0
+	ar_debug_updated.emit(alt_deg, az_deg)
 
 func _on_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
@@ -162,6 +211,8 @@ func _on_drag(event: InputEventScreenDrag) -> void:
 		if _pinch_start_dist > 0.0:
 			_set_fov(_pinch_start_fov * (_pinch_start_dist / dist))
 	elif _touches.size() == 1:
+		if ar_mode_enabled:
+			return  # orientation comes from sensors; single-finger drag-look disabled, pinch-zoom above still works
 		_apply_look_delta(event.position - _last_pos)
 		_velocity = event.position - _last_pos
 		_last_pos = event.position

@@ -23,6 +23,12 @@ var quiz_length: QuizLength = QuizLength.HUNDRED
 var quiz_round_count: int = 10
 var dev_mode: bool = false
 
+## AR (point-the-phone) mode, persisted across scene reloads since CameraRig is
+## re-instantiated per scene. In-memory only -- doesn't need to survive an app
+## restart the way QuizProgress does.
+var ar_mode_enabled: bool = false
+var ar_heading_offset_deg: float = 0.0
+
 func _ready() -> void:
 	for arg in OS.get_cmdline_args():
 		if arg == "--mode=quiz":

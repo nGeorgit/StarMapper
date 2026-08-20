@@ -13,12 +13,12 @@ signal round_result(correct: bool, constellation_name: String)
 @export var tap_move_tolerance_px := 20.0  ## press-release drift under this counts as a tap, not a pan
 @export var quiz_round_total := 10
 @export var min_visible_altitude_deg := GameState.MIN_VISIBLE_ALTITUDE_DEG  ## constellation center must be at least this high to be quizzed
-@export var reveal_pause_sec := 2.0  ## time the pan-to-target + highlight stays up before advancing
 
 @onready var camera_rig: CameraRig = $"../CameraRig"
 @onready var constellation_lines: MultiMeshInstance3D = $"../SkyRoot/ConstellationLines"
 @onready var target_label: Label = $"../UI/TargetLabel"
 @onready var feedback_label: Label = $"../UI/FeedbackLabel"
+@onready var continue_button: Button = $"../UI/ContinueButton"
 @onready var back_button: Button = $"../UI/BackButton"
 @onready var results_panel: Control = $"../UI/ResultsPanel"
 @onready var results_label: Label = $"../UI/ResultsPanel/ResultsLabel"
@@ -41,10 +41,12 @@ func _ready() -> void:
 	if GameState.mode != GameState.Mode.QUIZ:
 		target_label.visible = false
 		feedback_label.visible = false
+		continue_button.visible = false
 		return
 
 	play_again_button.pressed.connect(_restart_quiz)
 	menu_button.pressed.connect(_go_to_last_setup_menu)
+	continue_button.pressed.connect(_advance_round)
 
 	if GameState.quiz_round_count > 0:
 		quiz_round_total = GameState.quiz_round_count
@@ -83,8 +85,10 @@ func _restart_quiz() -> void:
 	results_panel.visible = false
 	target_label.visible = true
 	feedback_label.visible = true
+	continue_button.visible = false
 	_quiz_pool = _visible_constellations()
 	_quiz_pool.shuffle()
+	_quiz_pool = _quiz_pool.slice(0, quiz_round_total)
 	_start_round()
 
 func _start_round() -> void:
@@ -101,6 +105,7 @@ func _show_results() -> void:
 	constellation_lines.clear_highlight()
 	target_label.visible = false
 	feedback_label.visible = false
+	continue_button.visible = false
 	results_panel.visible = true
 	results_label.text = "You found %d/%d constellations!" % [_correct_count, _quiz_pool.size()]
 
@@ -151,12 +156,17 @@ func _check_tap(screen_pos: Vector2) -> void:
 
 	## Whatever they tapped, reveal the actual answer: pan it to center and light up
 	## its lines, so a correct guess gets confirmed and a wrong one gets shown where.
+	## Stays up until the player taps Continue, so they can study the sky first
+	## instead of getting rushed into the next round.
 	_accepting_input = false
 	var center: Vector2 = _target["center"]
 	camera_rig.pan_to_ra_dec(center.x, center.y)
 	constellation_lines.highlight_constellation(_target["id"])
 	_round_index += 1
-	await get_tree().create_timer(reveal_pause_sec).timeout
+	continue_button.visible = true
+
+func _advance_round() -> void:
+	continue_button.visible = false
 	constellation_lines.clear_highlight()
 	_start_round()
 

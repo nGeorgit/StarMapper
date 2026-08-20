@@ -29,6 +29,15 @@ window/size/viewport_height=1920
 window/stretch/mode="canvas_items"
 window/handheld/orientation=1
 
+[gui]
+
+theme/custom="res://resources/theme/ui_theme.tres"
+
+[input_devices]
+
+sensors/enable_gravity=true
+sensors/enable_magnetometer=true
+
 [rendering]
 
 renderer/rendering_method="mobile"

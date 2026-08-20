@@ -63,10 +63,17 @@ static func has_any_visible(constellations: Array, sky: GameState.SkyChoice) -> 
 			return true
 	return false
 
+## Cache for load_culture_raw, keyed by culture_id. Culture JSON files are static
+## game data that never change at runtime, so once parsed (disk read + JSON parse +
+## per-constellation center trig) a culture never needs to be redone this session.
+static var _raw_cache: Dictionary = {}
+
 ## Loads a culture's constellations straight from disk, independent of whichever set
 ## ConstellationSets currently has active (mirrors ConstellationSets._load_set without
 ## mutating the singleton). Returns [] if the culture id doesn't exist.
 static func load_culture_raw(culture_id: String) -> Array:
+	if _raw_cache.has(culture_id):
+		return _raw_cache[culture_id]
 	var path := ConstellationSets.SETS_DIR + culture_id + ".json"
 	if not FileAccess.file_exists(path):
 		return []
@@ -76,4 +83,5 @@ static func load_culture_raw(culture_id: String) -> Array:
 	var constellations: Array = parsed["constellations"]
 	for c in constellations:
 		c["center"] = AstroMath.constellation_center(c["segments"])
+	_raw_cache[culture_id] = constellations
 	return constellations
